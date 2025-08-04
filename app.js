@@ -13,12 +13,7 @@ class CodeLab {
                 'Content-Type': 'application/json',
                 'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
                 'X-RapidAPI-Key': 'demo' // Using demo key for public access
-            },
-            // Alternative free endpoints to try
-            alternativeUrls: [
-                'https://api.judge0.com',
-                'https://judge0-extra-ce.p.rapidapi.com'
-            ]
+            }
         };
         
         // Language configurations
@@ -74,37 +69,8 @@ class CodeLab {
         this.setupDarkMode();
         this.setupEditor();
         this.setupEventListeners();
+        this.checkJudge0Status();
         this.updateProjectName();
-        
-        // Add some delay to ensure all libraries are loaded
-        setTimeout(() => {
-            this.checkLibraries();
-            this.checkJudge0Status();
-        }, 1000);
-    }
-    
-    checkLibraries() {
-        this.appendToOutput('🔍 Checking library status...\n');
-        
-        if (typeof Sk !== 'undefined') {
-            this.appendToOutput('✅ Skulpt (Python) library loaded\n');
-        } else {
-            this.appendToOutput('❌ Skulpt (Python) library not loaded\n');
-        }
-        
-        if (typeof CodeMirror !== 'undefined') {
-            this.appendToOutput('✅ CodeMirror editor library loaded\n');
-        } else {
-            this.appendToOutput('❌ CodeMirror editor library not loaded\n');
-        }
-        
-        if (typeof JSZip !== 'undefined') {
-            this.appendToOutput('✅ JSZip download library loaded\n');
-        } else {
-            this.appendToOutput('❌ JSZip download library not loaded\n');
-        }
-        
-        this.appendToOutput('📚 Library check complete.\n\n');
     }
     
     setupDarkMode() {
@@ -180,38 +146,21 @@ class CodeLab {
     
     async checkJudge0Status() {
         const statusElement = document.getElementById('api-status-text');
-        
-        // Check multiple endpoints
-        const endpoints = [this.judge0Config.baseUrl, ...this.judge0Config.alternativeUrls];
-        let workingEndpoint = null;
-        
-        for (const endpoint of endpoints) {
-            try {
-                const response = await fetch(`${endpoint}/languages`, {
-                    method: 'GET',
-                    headers: endpoint === this.judge0Config.baseUrl ? 
-                        this.judge0Config.headers : 
-                        { 'Content-Type': 'application/json' }
-                });
-                
-                if (response.ok) {
-                    workingEndpoint = endpoint;
-                    break;
-                }
-            } catch (error) {
-                // Continue to next endpoint
-                continue;
+        try {
+            const response = await fetch(`${this.judge0Config.baseUrl}/system_info`, {
+                method: 'GET',
+                headers: this.judge0Config.headers
+            });
+            
+            if (response.ok) {
+                statusElement.textContent = 'Connected ✅';
+                statusElement.className = 'font-medium text-green-600 dark:text-green-400';
+            } else {
+                throw new Error('API not accessible');
             }
-        }
-        
-        if (workingEndpoint) {
-            statusElement.textContent = 'Connected ✅';
-            statusElement.className = 'font-medium text-green-600 dark:text-green-400';
-            this.appendToOutput(`🌐 Judge0 API connected via ${workingEndpoint}\n`);
-        } else {
+        } catch (error) {
             statusElement.textContent = 'Limited (Local execution only) ⚠️';
             statusElement.className = 'font-medium text-yellow-600 dark:text-yellow-400';
-            this.appendToOutput('⚠️ Judge0 API unavailable - Java, C++, MySQL will use local alternatives when possible.\n');
         }
     }
     
@@ -256,13 +205,6 @@ class CodeLab {
     
     async runPython(code) {
         try {
-            // Check if Skulpt is loaded
-            if (typeof Sk === 'undefined') {
-                this.appendToOutput('❌ Python Error: Skulpt library not loaded. Trying simple evaluation...\n');
-                this.runSimplePython(code);
-                return;
-            }
-            
             let output = '';
             
             // Configure Skulpt
@@ -275,69 +217,16 @@ class CodeLab {
                         throw "File not found: '" + filename + "'";
                     }
                     return Sk.builtinFiles["files"][filename];
-                },
-                __future__: Sk.python3
+                }
             });
             
-            // Execute Python code
-            const promise = Sk.misceval.asyncToPromise(() => {
+            await Sk.misceval.asyncToPromise(() => {
                 return Sk.importMainWithBody("<stdin>", false, code, true);
             });
-            
-            await promise;
             
             this.appendToOutput(`✅ Python execution completed:\n${output}\n`);
         } catch (error) {
             this.appendToOutput(`❌ Python Error: ${error.toString()}\n`);
-            this.appendToOutput(`💡 Trying simple evaluation fallback...\n`);
-            this.runSimplePython(code);
-        }
-    }
-    
-    runSimplePython(code) {
-        try {
-            // Simple Python-like evaluation for basic expressions
-            let output = '';
-            const printFunction = (...args) => {
-                output += args.map(arg => String(arg)).join(' ') + '\n';
-            };
-            
-            // Replace Python print statements with JavaScript equivalents
-            let jsCode = code
-                .replace(/print\s*\(/g, 'printFunction(')
-                .replace(/print\s+(.+)/g, 'printFunction($1)')
-                .replace(/^\s*#.*/gm, '') // Remove comments
-                .replace(/'''/g, '`').replace(/"""/g, '`'); // Convert triple quotes
-            
-            // Create a limited execution context
-            const context = {
-                printFunction,
-                console: { log: printFunction },
-                Math: Math,
-                parseInt: parseInt,
-                parseFloat: parseFloat,
-                String: String,
-                Number: Number,
-                Array: Array,
-                Object: Object
-            };
-            
-            // Execute in limited context
-            const func = new Function(...Object.keys(context), jsCode);
-            func(...Object.values(context));
-            
-            if (output) {
-                this.appendToOutput(`⚠️ Simple Python evaluation:\n${output}\n`);
-                this.appendToOutput(`📝 Note: Limited Python support. For full Python features, Skulpt library is required.\n`);
-            } else {
-                this.appendToOutput(`⚠️ Simple evaluation completed (no output generated)\n`);
-            }
-        } catch (error) {
-            this.appendToOutput(`❌ Simple Python evaluation failed: ${error.message}\n`);
-            this.appendToOutput(`💡 Suggestions:\n`);
-            this.appendToOutput(`   • Try simpler Python expressions\n`);
-            this.appendToOutput(`   • Check for syntax errors\n`);
-            this.appendToOutput(`   • Refresh page to reload Skulpt library\n`);
         }
     }
     
@@ -430,42 +319,11 @@ ${code}
     async runWithJudge0(code) {
         const config = this.languageConfig[this.currentLanguage];
         
-        // Try the primary endpoint first
-        let success = await this.tryJudge0Endpoint(this.judge0Config.baseUrl, code, config);
-        
-        if (!success) {
-            // Try alternative endpoints
-            for (const altUrl of this.judge0Config.alternativeUrls) {
-                this.appendToOutput(`🔄 Trying alternative endpoint...\n`);
-                success = await this.tryJudge0Endpoint(altUrl, code, config, true);
-                if (success) break;
-            }
-        }
-        
-        if (!success) {
-            this.appendToOutput(`❌ All Judge0 endpoints unavailable.\n`);
-            this.appendToOutput(`💡 Alternative solutions:\n`);
-            
-            // Try basic syntax checking for code quality
-            this.performBasicSyntaxCheck(code, config);
-            
-            this.appendToOutput(`   • For Java: Try online IDEs like repl.it or CodePen\n`);
-            this.appendToOutput(`   • For C++: Try online compilers like OnlineGDB\n`);
-            this.appendToOutput(`   • For MySQL: Try online SQL editors like SQLiteOnline\n`);
-            this.appendToOutput(`   • Or run locally with appropriate compilers/databases\n`);
-        }
-    }
-    
-    async tryJudge0Endpoint(baseUrl, code, config, isAlternative = false) {
         try {
-            const headers = isAlternative ? 
-                { 'Content-Type': 'application/json' } : 
-                this.judge0Config.headers;
-                
             // Submit code for execution
-            const submitResponse = await fetch(`${baseUrl}/submissions?wait=true`, {
+            const submitResponse = await fetch(`${this.judge0Config.baseUrl}/submissions`, {
                 method: 'POST',
-                headers: headers,
+                headers: this.judge0Config.headers,
                 body: JSON.stringify({
                     language_id: config.judge0Id,
                     source_code: btoa(code), // Base64 encode
@@ -474,55 +332,31 @@ ${code}
             });
             
             if (!submitResponse.ok) {
-                throw new Error(`HTTP ${submitResponse.status}: ${submitResponse.statusText}`);
+                throw new Error(`API Error: ${submitResponse.status}`);
             }
             
-            const result = await submitResponse.json();
+            const submitResult = await submitResponse.json();
+            const token = submitResult.token;
             
-            // Handle direct response (wait=true)
-            if (result.token) {
-                return await this.pollJudge0Result(result.token, baseUrl, headers);
-            } else {
-                return this.handleJudge0Result(result);
-            }
+            // Poll for results
+            await this.pollJudge0Result(token);
             
         } catch (error) {
-            this.appendToOutput(`❌ Endpoint ${baseUrl} failed: ${error.message}\n`);
-            return false;
+            this.appendToOutput(`❌ Execution failed: ${error.message}\n`);
+            this.appendToOutput('💡 Tip: Make sure you have internet connection for Judge0 API access.\n');
         }
     }
     
-    handleJudge0Result(result) {
-        let output = '';
-        
-        if (result.stdout) {
-            output += `Output:\n${atob(result.stdout)}\n`;
-        }
-        
-        if (result.stderr) {
-            output += `Errors:\n${atob(result.stderr)}\n`;
-        }
-        
-        if (result.compile_output) {
-            output += `Compilation:\n${atob(result.compile_output)}\n`;
-        }
-        
-        const statusIcon = result.status?.id === 3 ? '✅' : '❌';
-        const statusDesc = result.status?.description || 'Unknown';
-        this.appendToOutput(`${statusIcon} Execution ${statusDesc}:\n${output}\n`);
-        return true;
-    }
-    
-    async pollJudge0Result(token, baseUrl, headers, maxAttempts = 10) {
+    async pollJudge0Result(token, maxAttempts = 10) {
         for (let i = 0; i < maxAttempts; i++) {
             try {
-                const response = await fetch(`${baseUrl}/submissions/${token}`, {
+                const response = await fetch(`${this.judge0Config.baseUrl}/submissions/${token}`, {
                     method: 'GET',
-                    headers: headers
+                    headers: this.judge0Config.headers
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    throw new Error(`API Error: ${response.status}`);
                 }
                 
                 const result = await response.json();
@@ -534,16 +368,31 @@ ${code}
                 }
                 
                 // Execution completed
-                return this.handleJudge0Result(result);
+                let output = '';
+                
+                if (result.stdout) {
+                    output += `Output:\n${atob(result.stdout)}\n`;
+                }
+                
+                if (result.stderr) {
+                    output += `Errors:\n${atob(result.stderr)}\n`;
+                }
+                
+                if (result.compile_output) {
+                    output += `Compilation:\n${atob(result.compile_output)}\n`;
+                }
+                
+                const statusIcon = result.status.id === 3 ? '✅' : '❌';
+                this.appendToOutput(`${statusIcon} Execution ${result.status.description}:\n${output}\n`);
+                return;
                 
             } catch (error) {
                 this.appendToOutput(`❌ Failed to get results: ${error.message}\n`);
-                return false;
+                return;
             }
         }
         
         this.appendToOutput('⏱️ Execution timeout - please try again.\n');
-        return false;
     }
     
     clearEditor() {
@@ -646,104 +495,18 @@ Generated by CodeLab - Student Code Editor
         this.appendToOutput(`📄 Downloaded: ${filename}.${extension}\n`);
     }
     
-    performBasicSyntaxCheck(code, config) {
-        this.appendToOutput(`🔍 Performing basic syntax check for ${this.currentLanguage.toUpperCase()}...\n`);
+    getRunInstructions() {
+        const instructions = {
+            python: '1. Install Python 3.x\n2. Run: python filename.py',
+            java: '1. Install JDK\n2. Compile: javac filename.java\n3. Run: java Main',
+            cpp: '1. Install GCC compiler\n2. Compile: g++ filename.cpp -o program\n3. Run: ./program',
+            mysql: '1. Install MySQL\n2. Run: mysql -u username -p < filename.sql',
+            html: '1. Open filename.html in a web browser',
+            css: '1. Include in HTML: <link rel="stylesheet" href="filename.css">',
+            javascript: '1. Include in HTML: <script src="filename.js"></script>\n2. Or run with Node.js: node filename.js'
+        };
         
-        try {
-            let issues = [];
-            
-            switch (this.currentLanguage) {
-                case 'java':
-                    issues = this.checkJavaSyntax(code);
-                    break;
-                case 'cpp':
-                    issues = this.checkCppSyntax(code);
-                    break;
-                case 'mysql':
-                    issues = this.checkSqlSyntax(code);
-                    break;
-            }
-            
-            if (issues.length === 0) {
-                this.appendToOutput(`✅ No obvious syntax issues found!\n`);
-            } else {
-                this.appendToOutput(`⚠️ Potential issues found:\n`);
-                issues.forEach(issue => this.appendToOutput(`   • ${issue}\n`));
-            }
-        } catch (error) {
-            this.appendToOutput(`❌ Syntax check failed: ${error.message}\n`);
-        }
-    }
-    
-    checkJavaSyntax(code) {
-        const issues = [];
-        
-        if (!code.includes('public class')) {
-            issues.push('Missing "public class" declaration');
-        }
-        
-        if (!code.includes('public static void main')) {
-            issues.push('Missing main method');
-        }
-        
-        const openBraces = (code.match(/\{/g) || []).length;
-        const closeBraces = (code.match(/\}/g) || []).length;
-        if (openBraces !== closeBraces) {
-            issues.push(`Mismatched braces: ${openBraces} open, ${closeBraces} close`);
-        }
-        
-        const openParens = (code.match(/\(/g) || []).length;
-        const closeParens = (code.match(/\)/g) || []).length;
-        if (openParens !== closeParens) {
-            issues.push(`Mismatched parentheses: ${openParens} open, ${closeParens} close`);
-        }
-        
-        return issues;
-    }
-    
-    checkCppSyntax(code) {
-        const issues = [];
-        
-        if (!code.includes('#include')) {
-            issues.push('Missing #include directives');
-        }
-        
-        if (!code.includes('int main')) {
-            issues.push('Missing main function');
-        }
-        
-        const openBraces = (code.match(/\{/g) || []).length;
-        const closeBraces = (code.match(/\}/g) || []).length;
-        if (openBraces !== closeBraces) {
-            issues.push(`Mismatched braces: ${openBraces} open, ${closeBraces} close`);
-        }
-        
-        if (!code.includes('return')) {
-            issues.push('Main function should return a value');
-        }
-        
-        return issues;
-    }
-    
-    checkSqlSyntax(code) {
-        const issues = [];
-        
-        const sqlKeywords = ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER'];
-        const hasKeyword = sqlKeywords.some(keyword => 
-            code.toUpperCase().includes(keyword)
-        );
-        
-        if (!hasKeyword) {
-            issues.push('No SQL keywords found');
-        }
-        
-        const openParens = (code.match(/\(/g) || []).length;
-        const closeParens = (code.match(/\)/g) || []).length;
-        if (openParens !== closeParens) {
-            issues.push(`Mismatched parentheses: ${openParens} open, ${closeParens} close`);
-        }
-        
-        return issues;
+        return instructions[this.currentLanguage] || 'Refer to language documentation';
     }
 }
 

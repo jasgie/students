@@ -215,30 +215,8 @@ Supported Languages:
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
     
     <!-- Skulpt for Python -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/0.11.1/skulpt.min.js" 
-            onerror="console.error('Skulpt main library failed to load')"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/0.11.1/skulpt-stdlib.js" 
-            onerror="console.error('Skulpt stdlib failed to load')"></script>
-    
-    <!-- Fallback Skulpt from alternative CDN -->
-    <script>
-        // Check if Skulpt loaded, if not try alternative source
-        window.addEventListener('load', function() {
-            if (typeof Sk === 'undefined') {
-                console.warn('Skulpt not loaded from primary CDN, trying alternative...');
-                const script1 = document.createElement('script');
-                script1.src = 'https://unpkg.com/skulpt@0.11.1/dist/skulpt.min.js';
-                script1.onerror = () => console.error('Alternative Skulpt source also failed');
-                document.head.appendChild(script1);
-                
-                script1.onload = function() {
-                    const script2 = document.createElement('script');
-                    script2.src = 'https://unpkg.com/skulpt@0.11.1/dist/skulpt-stdlib.js';
-                    document.head.appendChild(script2);
-                };
-            }
-        });
-    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/0.11.1/skulpt.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/skulpt/0.11.1/skulpt-stdlib.js"></script>
     
     <!-- JSZip for creating zip files -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
