@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CodeLab API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>🧪 CodeLab API Test</h1>
+    <p>This page tests the OnlineCompiler.io API integration for CodeLab.</p>
+
+    <div class="test-section">
+        <h2>API Configuration Test</h2>
+        <p>Testing if the API endpoint is accessible and authentication works.</p>
+        <button onclick="testApiConnection()">Test API Connection</button>
+        <div id="api-status" class="status info">Click the button to test the API connection.</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Language Support Test</h2>
+        <p>Testing if we can retrieve the list of supported languages.</p>
+        <button onclick="testLanguages()">Get Supported Languages</button>
+        <div id="languages-output" class="output">Click the button to get supported languages.</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Code Execution Test</h2>
+        <p>Testing actual code execution with different languages.</p>
+        <button onclick="testPython()">Test Python</button>
+        <button onclick="testJava()">Test Java</button>
+        <button onclick="testCpp()">Test C++</button>
+        <div id="execution-output" class="output">Click a button to test code execution.</div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results Summary</h2>
+        <div id="summary" class="status info">Run tests to see summary.</div>
+    </div>
+
+    <script>
+        const API_KEY = '65ac8c70f7662ae07b166e640b54aa63';
+        const BASE_URL = 'https://onlinecompiler.io/api/v1';
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${API_KEY}`
+        };
+
+        let testResults = {
+            apiConnection: null,
+            languages: null,
+            pythonExecution: null,
+            javaExecution: null,
+            cppExecution: null
+        };
+
+        async function testApiConnection() {
+            const statusDiv = document.getElementById('api-status');
+            statusDiv.textContent = 'Testing API connection...';
+            statusDiv.className = 'status info';
+
+            try {
+                const response = await fetch(`${BASE_URL}/languages`, {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    statusDiv.textContent = '✅ API Connection Successful!';
+                    statusDiv.className = 'status success';
+                    testResults.apiConnection = true;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                statusDiv.textContent = `❌ API Connection Failed: ${error.message}`;
+                statusDiv.className = 'status error';
+                testResults.apiConnection = false;
+            }
+            
+            updateSummary();
+        }
+
+        async function testLanguages() {
+            const outputDiv = document.getElementById('languages-output');
+            outputDiv.textContent = 'Fetching supported languages...';
+
+            try {
+                const response = await fetch(`${BASE_URL}/languages`, {
+                    method: 'GET',
+                    headers: headers
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    outputDiv.textContent = `✅ Supported Languages:\n${JSON.stringify(data, null, 2)}`;
+                    testResults.languages = true;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                outputDiv.textContent = `❌ Failed to get languages: ${error.message}`;
+                testResults.languages = false;
+            }
+            
+            updateSummary();
+        }
+
+        async function testCodeExecution(language, code, testName) {
+            const outputDiv = document.getElementById('execution-output');
+            outputDiv.textContent = `Testing ${testName} execution...`;
+
+            try {
+                const response = await fetch(`${BASE_URL}/execute`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        language: language,
+                        code: code,
+                        input: ''
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    outputDiv.textContent = `✅ ${testName} Execution Result:\n${JSON.stringify(result, null, 2)}`;
+                    return true;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                outputDiv.textContent = `❌ ${testName} Execution Failed: ${error.message}`;
+                return false;
+            }
+        }
+
+        async function testPython() {
+            const code = 'print("Hello from Python!")';
+            testResults.pythonExecution = await testCodeExecution('python', code, 'Python');
+            updateSummary();
+        }
+
+        async function testJava() {
+            const code = `public class Main {
+    public static void main(String[] args) {
+        System.out.println("Hello from Java!");
+    }
+}`;
+            testResults.javaExecution = await testCodeExecution('java', code, 'Java');
+            updateSummary();
+        }
+
+        async function testCpp() {
+            const code = `#include <iostream>
+using namespace std;
+
+int main() {
+    cout << "Hello from C++!" << endl;
+    return 0;
+}`;
+            testResults.cppExecution = await testCodeExecution('cpp', code, 'C++');
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary');
+            const completedTests = Object.values(testResults).filter(result => result !== null);
+            const passedTests = completedTests.filter(result => result === true);
+            
+            if (completedTests.length === 0) {
+                summaryDiv.textContent = 'No tests completed yet.';
+                summaryDiv.className = 'status info';
+                return;
+            }
+
+            const summaryText = `Test Results: ${passedTests.length}/${completedTests.length} passed
+            
+API Connection: ${testResults.apiConnection === null ? 'Not tested' : testResults.apiConnection ? '✅ Pass' : '❌ Fail'}
+Languages Fetch: ${testResults.languages === null ? 'Not tested' : testResults.languages ? '✅ Pass' : '❌ Fail'}
+Python Execution: ${testResults.pythonExecution === null ? 'Not tested' : testResults.pythonExecution ? '✅ Pass' : '❌ Fail'}
+Java Execution: ${testResults.javaExecution === null ? 'Not tested' : testResults.javaExecution ? '✅ Pass' : '❌ Fail'}
+C++ Execution: ${testResults.cppExecution === null ? 'Not tested' : testResults.cppExecution ? '✅ Pass' : '❌ Fail'}`;
+
+            summaryDiv.textContent = summaryText;
+            summaryDiv.className = passedTests.length === completedTests.length ? 'status success' : 'status error';
+        }
+
+        // Auto-run API connection test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testApiConnection, 1000);
+        });
+    </script>
+</body>
+</html>

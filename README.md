@@ -8,9 +8,9 @@ A comprehensive client-side web application that allows students to write, run, 
 
 ### 🔧 Multi-Language Support
 - **Python** - Client-side execution using Skulpt
-- **Java** - Server-side execution via Judge0 API
-- **C++** - Server-side execution via Judge0 API  
-- **MySQL** - SQL query execution via Judge0 API
+- **Java** - Server-side execution via OnlineCompiler.io API
+- **C++** - Server-side execution via OnlineCompiler.io API  
+- **MySQL** - SQL query execution via OnlineCompiler.io API
 - **HTML** - Live preview in new browser tab
 - **CSS** - Live preview with sample HTML template
 - **JavaScript** - Client-side execution with console capture
@@ -53,8 +53,8 @@ A comprehensive client-side web application that allows students to write, run, 
 - **JavaScript**: Direct execution with console output capture
 - **HTML/CSS**: Live preview in new browser windows
 
-### Server-Side Execution (Judge0 API)
-- **Java, C++, MySQL**: Executed via Judge0 CE API
+### Server-Side Execution (OnlineCompiler.io API)
+- **Java, C++, MySQL**: Executed via OnlineCompiler.io API
 - **Free Tier**: Uses public demo endpoints
 - **Fallback**: Graceful degradation when API unavailable
 
@@ -64,7 +64,7 @@ A comprehensive client-side web application that allows students to write, run, 
 - **Code Editor**: CodeMirror
 - **Python Runtime**: Skulpt
 - **File Handling**: JSZip
-- **API**: Judge0 Code Execution Engine
+- **API**: OnlineCompiler.io Code Execution Engine
 
 ## 📝 Usage Guide
 
@@ -122,7 +122,7 @@ A comprehensive client-side web application that allows students to write, run, 
 - Update `app.js` for functionality changes
 
 ### API Configuration
-- Replace Judge0 API key in `judge0Config`
+- Replace OnlineCompiler.io API key in `compilerConfig`
 - Modify API endpoints if using different service
 - Add error handling for API failures
 
@@ -134,7 +134,7 @@ A comprehensive client-side web application that allows students to write, run, 
 - HTML/CSS opens in new windows for isolation
 
 ### Server-Side Execution
-- Code sent to external Judge0 API
+- Code sent to external OnlineCompiler.io API
 - No sensitive data should be included in code
 - Rate limiting applies to free tier usage
 
@@ -172,7 +172,7 @@ This project is open source and available under the [MIT License](LICENSE).
 
 - **CodeMirror** - Excellent code editor component
 - **Skulpt** - Python-to-JavaScript compiler
-- **Judge0** - Code execution API service
+- **OnlineCompiler.io** - Code execution API service
 - **Tailwind CSS** - Utility-first CSS framework
 - **JSZip** - JavaScript ZIP library
 
@@ -181,7 +181,7 @@ This project is open source and available under the [MIT License](LICENSE).
 ### Common Issues
 
 **Q: Code won't run for Java/C++/MySQL**
-A: Check internet connection - these languages require Judge0 API access.
+A: Check internet connection - these languages require OnlineCompiler.io API access.
 
 **Q: Python code gives errors**
 A: Ensure code is Python 2.7 compatible (Skulpt limitation).

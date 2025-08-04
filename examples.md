@@ -347,7 +347,7 @@ h1 {
 ## Tips for Testing
 
 - Start with simple examples before trying complex ones
-- Check your internet connection for Judge0-dependent languages (Java, C++, MySQL)
+- Check your internet connection for OnlineCompiler.io-dependent languages (Java, C++, MySQL)
 - Use the provided templates as starting points
 - Experiment with modifications to understand how the code works
 - Download your projects to save your work locally

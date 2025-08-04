@@ -6,13 +6,13 @@ class CodeLab {
         this.isDarkMode = localStorage.getItem('darkMode') === 'true';
         this.projectName = 'My Project';
         
-        // Judge0 API Configuration (using free tier)
-        this.judge0Config = {
-            baseUrl: 'https://judge0-ce.p.rapidapi.com',
+        // OnlineCompiler.io API Configuration
+        this.compilerConfig = {
+            baseUrl: 'https://onlinecompiler.io/api/v1',
+            apiKey: '65ac8c70f7662ae07b166e640b54aa63', // Your API key
             headers: {
                 'Content-Type': 'application/json',
-                'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com',
-                'X-RapidAPI-Key': 'demo' // Using demo key for public access
+                'Authorization': 'Bearer 65ac8c70f7662ae07b166e640b54aa63'
             }
         };
         
@@ -20,25 +20,25 @@ class CodeLab {
         this.languageConfig = {
             python: { 
                 mode: 'python', 
-                judge0Id: 71, 
+                languageId: 'python', 
                 extension: 'py',
                 template: '# Python Code\nprint("Hello, World!")\n\n# Write your Python code here\n'
             },
             java: { 
                 mode: 'text/x-java', 
-                judge0Id: 62, 
+                languageId: 'java', 
                 extension: 'java',
                 template: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, World!");\n        \n        // Write your Java code here\n    }\n}\n'
             },
             cpp: { 
                 mode: 'text/x-c++src', 
-                judge0Id: 54, 
+                languageId: 'cpp', 
                 extension: 'cpp',
                 template: '#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << "Hello, World!" << endl;\n    \n    // Write your C++ code here\n    \n    return 0;\n}\n'
             },
             mysql: { 
                 mode: 'text/x-sql', 
-                judge0Id: 82, 
+                languageId: 'sql', 
                 extension: 'sql',
                 template: '-- MySQL Query\nSELECT "Hello, World!" as message;\n\n-- Write your SQL queries here\n-- Note: CREATE TABLE and INSERT operations may be limited in the sandbox\n'
             },
@@ -50,13 +50,13 @@ class CodeLab {
             },
             css: { 
                 mode: 'css', 
-                judge0Id: null, 
+                languageId: null, 
                 extension: 'css',
                 template: '/* CSS Styles */\nbody {\n    font-family: Arial, sans-serif;\n    margin: 0;\n    padding: 20px;\n    background-color: #f0f0f0;\n}\n\nh1 {\n    color: #333;\n    text-align: center;\n}\n\n/* Write your CSS code here */\n'
             },
             javascript: { 
                 mode: 'javascript', 
-                judge0Id: null, 
+                languageId: null, 
                 extension: 'js',
                 template: '// JavaScript Code\nconsole.log("Hello, World!");\n\n// Write your JavaScript code here\nfunction greet(name) {\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greet("CodeLab"));\n'
             }
@@ -69,7 +69,7 @@ class CodeLab {
         this.setupDarkMode();
         this.setupEditor();
         this.setupEventListeners();
-        this.checkJudge0Status();
+        this.checkApiStatus();
         this.updateProjectName();
     }
     
@@ -144,12 +144,12 @@ class CodeLab {
         document.title = `${this.projectName || 'CodeLab'} - Student Code Editor`;
     }
     
-    async checkJudge0Status() {
+    async checkApiStatus() {
         const statusElement = document.getElementById('api-status-text');
         try {
-            const response = await fetch(`${this.judge0Config.baseUrl}/system_info`, {
+            const response = await fetch(`${this.compilerConfig.baseUrl}/languages`, {
                 method: 'GET',
-                headers: this.judge0Config.headers
+                headers: this.compilerConfig.headers
             });
             
             if (response.ok) {
@@ -191,7 +191,7 @@ class CodeLab {
                 case 'java':
                 case 'cpp':
                 case 'mysql':
-                    await this.runWithJudge0(code);
+                    await this.runWithCompiler(code);
                     break;
                 default:
                     this.appendToOutput('❌ Language not supported for execution.\n');
@@ -316,18 +316,18 @@ ${code}
         }
     }
     
-    async runWithJudge0(code) {
+    async runWithCompiler(code) {
         const config = this.languageConfig[this.currentLanguage];
         
         try {
-            // Submit code for execution
-            const submitResponse = await fetch(`${this.judge0Config.baseUrl}/submissions`, {
+            // Submit code for execution to onlinecompiler.io
+            const submitResponse = await fetch(`${this.compilerConfig.baseUrl}/execute`, {
                 method: 'POST',
-                headers: this.judge0Config.headers,
+                headers: this.compilerConfig.headers,
                 body: JSON.stringify({
-                    language_id: config.judge0Id,
-                    source_code: btoa(code), // Base64 encode
-                    stdin: btoa(''), // Empty stdin
+                    language: config.languageId,
+                    code: code,
+                    input: '' // Empty input
                 })
             });
             
@@ -335,64 +335,30 @@ ${code}
                 throw new Error(`API Error: ${submitResponse.status}`);
             }
             
-            const submitResult = await submitResponse.json();
-            const token = submitResult.token;
+            const result = await submitResponse.json();
             
-            // Poll for results
-            await this.pollJudge0Result(token);
+            // Display results
+            let output = '';
+            
+            if (result.success) {
+                if (result.output) {
+                    output += `Output:\n${result.output}\n`;
+                }
+                
+                if (result.error) {
+                    output += `Errors:\n${result.error}\n`;
+                }
+                
+                const statusIcon = result.error ? '⚠️' : '✅';
+                this.appendToOutput(`${statusIcon} Execution completed:\n${output}\n`);
+            } else {
+                this.appendToOutput(`❌ Execution failed: ${result.message || 'Unknown error'}\n`);
+            }
             
         } catch (error) {
             this.appendToOutput(`❌ Execution failed: ${error.message}\n`);
-            this.appendToOutput('💡 Tip: Make sure you have internet connection for Judge0 API access.\n');
+            this.appendToOutput('💡 Tip: Make sure you have internet connection for OnlineCompiler.io API access.\n');
         }
-    }
-    
-    async pollJudge0Result(token, maxAttempts = 10) {
-        for (let i = 0; i < maxAttempts; i++) {
-            try {
-                const response = await fetch(`${this.judge0Config.baseUrl}/submissions/${token}`, {
-                    method: 'GET',
-                    headers: this.judge0Config.headers
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-                
-                const result = await response.json();
-                
-                if (result.status.id <= 2) {
-                    // Still processing
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    continue;
-                }
-                
-                // Execution completed
-                let output = '';
-                
-                if (result.stdout) {
-                    output += `Output:\n${atob(result.stdout)}\n`;
-                }
-                
-                if (result.stderr) {
-                    output += `Errors:\n${atob(result.stderr)}\n`;
-                }
-                
-                if (result.compile_output) {
-                    output += `Compilation:\n${atob(result.compile_output)}\n`;
-                }
-                
-                const statusIcon = result.status.id === 3 ? '✅' : '❌';
-                this.appendToOutput(`${statusIcon} Execution ${result.status.description}:\n${output}\n`);
-                return;
-                
-            } catch (error) {
-                this.appendToOutput(`❌ Failed to get results: ${error.message}\n`);
-                return;
-            }
-        }
-        
-        this.appendToOutput('⏱️ Execution timeout - please try again.\n');
     }
     
     clearEditor() {
